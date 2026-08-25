@@ -1,0 +1,237 @@
+// Mood Swings — a private music & romance space for two people.
+// Data model follows PRD §19, extended with the mood system (PRD §13).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// People & the couple space
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  name        String?
+  email       String   @unique
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  couplesAsPartner1 Couple[]      @relation("Partner1")
+  couplesAsPartner2 Couple[]      @relation("Partner2")
+  sentNotes         LoveNote[]    @relation("NoteSender")
+  receivedNotes     LoveNote[]    @relation("NoteRecipient")
+  favorites         Favorite[]
+  createdMemories   Memory[]
+  moodCheckIns      MoodCheckIn[]
+
+  @@index([clerkUserId])
+}
+
+model Couple {
+  id         String  @id @default(cuid())
+  /// Display name for the space, e.g. "Alex + Sarah".
+  name       String
+  partner1Id String
+  /// Null until the invited partner accepts. PRD §22.
+  partner2Id String?
+
+  relationshipStartDate DateTime?
+  anniversaryDate       DateTime?
+
+  /// Short code the owner shares so their partner can join. PRD §4.1.
+  inviteCode String @unique
+
+  theme Theme @default(ROMANTIC)
+
+  /// Sync state for the shared playlist (PRD §7). The playlist itself is
+  /// configured app-wide in `lib/youtube-config.ts`, not per couple.
+  playlistLastSyncedAt DateTime?
+  playlistSyncStatus   SyncStatus @default(IDLE)
+  playlistSyncError    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  partner1 User  @relation("Partner1", fields: [partner1Id], references: [id], onDelete: Cascade)
+  partner2 User? @relation("Partner2", fields: [partner2Id], references: [id], onDelete: SetNull)
+
+  songs        Song[]
+  loveNotes    LoveNote[]
+  memories     Memory[]
+  moods        Mood[]
+  moodCheckIns MoodCheckIn[]
+
+  @@index([partner1Id])
+  @@index([partner2Id])
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  ROMANTIC
+}
+
+// ─────────────────────────────────────────────────────────────
+// YouTube (PRD §6, §7)
+// ─────────────────────────────────────────────────────────────
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  ERROR
+}
+
+/// A song is YouTube metadata only — never the audio itself. PRD §6.
+model Song {
+  id             String  @id @default(cuid())
+  coupleId       String
+  youtubeVideoId String
+  title          String
+  artist         String?
+  thumbnail      String?
+  /// Seconds. Null when YouTube does not report a duration.
+  duration       Int?
+  position       Int
+  /// False when the video was removed or went private upstream. PRD §7.
+  isAvailable    Boolean @default(true)
+
+  addedAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  couple    Couple     @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  favorites Favorite[]
+  memories  Memory[]
+  moodTags  SongMood[]
+
+  @@unique([coupleId, youtubeVideoId])
+  @@index([coupleId, position])
+}
+
+/// Per-person favourites, so "his / hers / ours" can be derived. PRD §12.
+model Favorite {
+  userId    String
+  songId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([userId, songId])
+  @@index([songId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// The romantic layer (PRD §10, §11, §15)
+// ─────────────────────────────────────────────────────────────
+
+model LoveNote {
+  id          String @id @default(cuid())
+  coupleId    String
+  senderId    String
+  recipientId String
+
+  content    String
+  isRead     Boolean @default(false)
+  isFavorite Boolean @default(false)
+
+  /// Optional scheduled delivery — hidden from the recipient until due. PRD §10.
+  deliverAt DateTime?
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  couple    Couple @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  sender    User   @relation("NoteSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User   @relation("NoteRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([coupleId, createdAt])
+  @@index([recipientId, isRead])
+}
+
+/// A memory, optionally anchored to a song. PRD §11 (song memories) and §15.
+model Memory {
+  id          String    @id @default(cuid())
+  coupleId    String
+  title       String
+  description String?
+  date        DateTime?
+  image       String?
+  songId      String?
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  couple    Couple @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  song      Song?  @relation(fields: [songId], references: [id], onDelete: SetNull)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([coupleId, date])
+  @@index([songId])
+  @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Moods (PRD §13)
+// ─────────────────────────────────────────────────────────────
+
+/// Seeded per couple from a default set, so a couple can rename or
+/// add their own without affecting anyone else.
+model Mood {
+  id        String @id @default(cuid())
+  coupleId  String
+  slug      String
+  name      String
+  /// Key into the icon registry in `components/icons.tsx`. Still the `emoji`
+  /// column, so rows seeded before the UI moved to icons keep working.
+  icon      String @map("emoji")
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  couple   Couple        @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  songTags SongMood[]
+  checkIns MoodCheckIn[]
+
+  @@unique([coupleId, slug])
+  @@index([coupleId, sortOrder])
+}
+
+/// Tags a song with a mood so a mood can filter the library. PRD §13.
+model SongMood {
+  songId String
+  moodId String
+
+  createdAt DateTime @default(now())
+
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+  mood Mood @relation(fields: [moodId], references: [id], onDelete: Cascade)
+
+  @@id([songId, moodId])
+  @@index([moodId])
+}
+
+/// "How are you feeling?" — the latest row per user is their current mood.
+model MoodCheckIn {
+  id        String   @id @default(cuid())
+  coupleId  String
+  userId    String
+  moodId    String
+  createdAt DateTime @default(now())
+
+  couple Couple @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood   Mood   @relation(fields: [moodId], references: [id], onDelete: Cascade)
+
+  @@index([coupleId, createdAt])
+  @@index([userId, createdAt])
+}

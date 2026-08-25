@@ -1,0 +1,433 @@
+@import "tailwindcss";
+
+/*
+ * Mood Swings design system — PRD §23.
+ * "Romantic but sophisticated. Avoid making it look like a Valentine's Day website."
+ *
+ * Three themes (PRD §18): romantic (default), light, dark. Themes swap the raw
+ * custom properties below; `@theme inline` maps them to Tailwind utilities so
+ * `bg-canvas` / `text-ink` resolve per-theme at runtime.
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-blush: var(--blush);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --font-serif: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-xl2: 1.25rem;
+  --radius-xl3: 1.75rem;
+
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.5s ease both;
+  --animate-heartbeat: heartbeat 2.4s ease-in-out infinite;
+}
+
+/* ── Romantic (default) ─────────────────────────────────────── */
+:root,
+[data-theme="romantic"] {
+  --canvas: #fff8f5;
+  --raised: #fffdfc;
+  --sunken: #fdeef0;
+
+  --ink: #2a151c;
+  --ink-soft: #6d4d57;
+  --ink-faint: #a1848c;
+
+  --primary: #8b1e3f;
+  --primary-soft: #b23a5c;
+  --accent: #c44569;
+  --blush: #f8d7da;
+
+  --line: #f2dcdf;
+  --line-strong: #e6c3c8;
+
+  --glow: rgba(196, 69, 105, 0.16);
+  --scrim: rgba(42, 21, 28, 0.42);
+}
+
+/* ── Light: cooler, calmer, less saturated ──────────────────── */
+[data-theme="light"] {
+  --canvas: #fcfcfd;
+  --raised: #ffffff;
+  --sunken: #f4f4f6;
+
+  --ink: #171717;
+  --ink-soft: #5c5c66;
+  --ink-faint: #94949f;
+
+  --primary: #8b1e3f;
+  --primary-soft: #a8365a;
+  --accent: #c44569;
+  --blush: #f8d7da;
+
+  --line: #e8e8ec;
+  --line-strong: #d6d6dd;
+
+  --glow: rgba(139, 30, 63, 0.1);
+  --scrim: rgba(23, 23, 23, 0.45);
+}
+
+/* ── Dark romantic (PRD §23: "dark romantic music-player mode") ─ */
+[data-theme="dark"] {
+  --canvas: #140a0e;
+  --raised: #1f1116;
+  --sunken: #0d0609;
+
+  --ink: #f7ecee;
+  --ink-soft: #c4a6ad;
+  --ink-faint: #8a6a72;
+
+  --primary: #e8809b;
+  --primary-soft: #f0a3b8;
+  --accent: #c44569;
+  --blush: #3a1f28;
+
+  --line: #332027;
+  --line-strong: #4a2c35;
+
+  --glow: rgba(232, 128, 155, 0.14);
+  --scrim: rgba(0, 0, 0, 0.62);
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    /* A barely-there warmth behind everything, per "soft gradients". */
+    background-image:
+      radial-gradient(ellipse 80% 55% at 12% -8%, var(--glow), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 92% 4%, var(--glow), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: var(--blush);
+    color: var(--primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /*
+   * Tailwind v4 no longer sets `cursor: pointer` on buttons — its preflight
+   * defers to the browser default of `cursor: default`, which makes every
+   * control feel inert. Restore it for anything actually clickable.
+   */
+  button:not(:disabled),
+  summary,
+  select:not(:disabled),
+  label:has(input:not(:disabled)),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  input[type="range"]:not(:disabled) {
+    cursor: grab;
+  }
+
+  input[type="range"]:active {
+    cursor: grabbing;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 99px;
+    border: 3px solid var(--canvas);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-faint);
+  }
+}
+
+@layer components {
+  /* Subtle glassmorphism — PRD §23. */
+  .glass {
+    background: color-mix(in srgb, var(--raised) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  }
+
+  .card {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl2);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.03),
+      0 8px 24px -12px var(--glow);
+  }
+
+  /* Serif display type for romantic headings. */
+  .display {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  8% {
+    transform: scale(1.14);
+  }
+  16% {
+    transform: scale(1);
+  }
+  24% {
+    transform: scale(1.1);
+  }
+  32% {
+    transform: scale(1);
+  }
+}
+
+/* Heart particles — "used sparingly" (PRD §23). */
+@keyframes drift {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6) rotate(0deg);
+  }
+  10% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-90px) scale(1) rotate(22deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── Route transitions ──────────────────────────────────────── */
+
+/*
+ * Applied via <ViewTransition default="page"> in the app layout. The outgoing
+ * page fades out slightly faster than the incoming one arrives, which reads as
+ * a soft dissolve rather than a crossfade smear.
+ */
+::view-transition-old(.page) {
+  animation: fade-out 140ms ease-in both;
+}
+
+::view-transition-new(.page) {
+  animation: fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The root snapshot would otherwise fade the whole document as well. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@layer components {
+  /*
+   * Reveals children in sequence. Depth is capped at 10 — past that the
+   * delay would feel like lag rather than choreography, so later items
+   * share the final offset.
+   */
+  .stagger > * {
+    animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .stagger > *:nth-child(2) {
+    animation-delay: 35ms;
+  }
+
+  .stagger > *:nth-child(3) {
+    animation-delay: 70ms;
+  }
+
+  .stagger > *:nth-child(4) {
+    animation-delay: 105ms;
+  }
+
+  .stagger > *:nth-child(5) {
+    animation-delay: 140ms;
+  }
+
+  .stagger > *:nth-child(6) {
+    animation-delay: 175ms;
+  }
+
+  .stagger > *:nth-child(7) {
+    animation-delay: 210ms;
+  }
+
+  .stagger > *:nth-child(8) {
+    animation-delay: 245ms;
+  }
+
+  .stagger > *:nth-child(9) {
+    animation-delay: 280ms;
+  }
+
+  .stagger > *:nth-child(n + 10) {
+    animation-delay: 315ms;
+  }
+
+  /* Loading placeholder that reads as "content is coming". */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--sunken) 25%,
+      color-mix(in srgb, var(--line) 60%, var(--sunken)) 50%,
+      var(--sunken) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    border-radius: 0.75rem;
+  }
+
+  /* Lifts a card slightly on hover without shifting neighbours. */
+  .hoverable {
+    transition:
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  
+  .hoverable:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 16px 32px -18px var(--glow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* View transitions ignore the rules above, so disable them explicitly. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .hoverable:hover {
+    transform: none;
+  }
+}
